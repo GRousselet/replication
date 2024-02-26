@@ -1,0 +1,121 @@
+---
+title: "Prediction intervals"
+author: "Guillaume A. Rousselet"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    fig_caption: no
+    number_sections: no
+    toc: yes
+    toc_depth: 2
+    # github_document:
+    # html_preview: yes
+    # toc: yes
+    # toc_depth: 2
+---
+
+# Dependencies
+
+```{r}
+library(tibble)
+library(ggplot2)
+# source("./code/functions.R")
+```
+
+
+# Prediction intervals
+
+```{r}
+predint <- function(n1, n2, m1, sd1, alpha = 0.05){
+se <- sqrt( (sd1^2 / n1) + (sd1^2 / n2))
+df <- n1 - 1
+tval <- qt(1-alpha/2, df)
+ci[1] <- m1 - qt(1-alpha/2,df)*se
+ci[2] <- m1 + qt(1-alpha/2,df)*se
+ci
+}
+```
+
+## Example from Spence & Stanley (2024)
+
+https://journals.sagepub.com/doi/10.1177/25152459231217932
+
+```{r}
+n1 <- 50
+n2 <- 70
+m1 <- 7.21
+sd1 <- 2.20
+ci <- predint(n1, n2, m1, sd1)
+ci
+```
+
+
+# Simulation: normal distribution
+
+In each simulation, perform 2 experiments. First experiment has $n1=50$, second has $n2=70$. Consider one-sample case.
+
+Consider these rules to indicate support for a replication:  
+ 
+- mean in sample 2, $m_2$, is contained in prediction interval;  
+- $m_2$ is contained in the confidence interval from experiment 1;  
+- the confidence intervals from the two experiments overlap.  
+
+```{r}
+nsim <- 10000
+simres <- matrix(NA, nrow = nsim, 3)
+n1 <- 50
+n2 <- 70
+
+for(S in 1:nsim){
+  samp1 <- rnorm(n1)
+  ci1 <- t.test(samp1)$conf.int
+  m1 <- mean(samp1)
+  sd1 <- sd(samp1)
+  pi <- predint(n1, n2, m1, sd1)
+  simres.pi.width[S] <- pi[2] - pi[1]
+  samp2 <- rnorm(n2)
+  ci2 <- t.test(samp2)$conf.int
+  m2 <- mean(samp2)
+  # rule 1: m2 contained in prediction interval
+  simres[S,1] <- m2 >= pi[1] && m2 <= pi[2]
+  # rule 2: m2 contained in confidence interval
+  simres[S,2] <- m2 >= ci1[1] && m2 <= ci1[2]
+  # rule 3: confidence intervals overlap
+  simres[S,3] <- ci1[1] <= ci2[2] && ci2[1] <= ci1[2]
+}
+# coverage
+apply(simres, 2, mean)
+```
+
+# Simulation: lognormal distribution
+
+```{r}
+nsim <- 10000
+simres <- matrix(NA, nrow = nsim, 3)
+n1 <- 50
+n2 <- 70
+
+for(S in 1:nsim){
+  samp1 <- rlnorm(n1)
+  ci1 <- t.test(samp1)$conf.int
+  m1 <- mean(samp1)
+  sd1 <- sd(samp1)
+  pi <- predint(n1, n2, m1, sd1)
+  simres.pi.width[S] <- pi[2] - pi[1]
+  samp2 <- rlnorm(n2)
+  ci2 <- t.test(samp2)$conf.int
+  m2 <- mean(samp2)
+  # rule 1: m2 is contained in prediction interval
+  simres[S,1] <- m2 >= pi[1] && m2 <= pi[2]
+  # rule 2: m2 is contained in confidence interval
+  simres[S,2] <- m2 >= ci1[1] && m2 <= ci1[2]
+  # rule 3: the confidence intervals overlap
+  simres[S,3] <- ci1[1] <= ci2[2] && ci2[1] <= ci1[2]
+}
+# coverage
+apply(simres, 2, mean)
+```
+
+
+
+
