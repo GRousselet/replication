@@ -102,7 +102,9 @@ print("inference on 20% trimmed means:")
 round(apply(simres.tm, 2, mean), digits = 3)
 ```
 
-Prediction interval works as intended. Coverage using CI rule is too conservative. CI overlap is far too liberal. PI for 20% trimmed means has coverage a bit liberal.  
+Prediction interval works as intended, will nominal capture rate.  
+Coverage using CI rule is too conservative, way below the 95% that could (wrongly) be expected.   
+Coverage of PI for 20% trimmed means is a bit liberal.   
 
 # Simulation: lognormal distribution
 
@@ -352,23 +354,8 @@ ggplot(df, aes(x = n, y = coverage, colour = pop, linetype = est)) + theme_gar +
   # theme(legend.position = "bottom")
 ```
 
-# Prediction interval + minimum effect size
-
-Now let's consider a situation in which we perform one experiment with sample size n: if the result is statistically significant, and the effect size is larger than the minimum effect size of interest (0.1), then we carry out a replication with sample size n*2. 
-Population is slightly skewed and likely to generate outliers: $g=0.3$ and $h=0.05$. 
-The population has mean 0.3 -- so Cohen's d of 0.3 assuming a normal population, but less in practice. 
-What proportions of experiments lead to consistent results, meaning that the original and the replication both meet the criteria?  
-
-```{r}
-
-```
-
 # References
-Rouder, J.N., Morey, R.D., Verhagen, J., Province, J.M. and Wagenmakers, E.-J. (2016), Is There a Free Lunch in Inference?. Top Cogn Sci, 8: 520-547. https://doi.org/10.1111/tops.12214
-
 Spence, J. R., & Stanley, D. J. (2024). Tempered Expectations: A Tutorial for Calculating and Interpreting Prediction Intervals in the Context of Replications. Advances in Methods and Practices in Psychological Science, 7(1), 25152459231217932. https://doi.org/10.1177/25152459231217932
-
-Wagenmakers, E.-J., Lee, M.D., Rouder, J.N., & Morey, R.D. (2020) The Principle of Predictive Irrelevance or Why Intervals Should Not be Used for Model Comparison Featuring a Point Null Hypothesis. In Gruber, C.W. (ed), The Theory of Statistics in Psychology: Applications, Use, and Misunderstandings. Springer International Publishing, Cham, pp. 111–129.
 
 Wilcox, R. R., & Rousselet, G. A. (2023). An Updated Guide to Robust Statistical Methods in Neuroscience. Current Protocols, 3(3), e719. https://doi.org/10.1002/cpz1.719
 

@@ -3,15 +3,15 @@ title: "You get the symptoms of a replication crisis even when there isn't one: 
 author: "Guillaume A. Rousselet"
 date: "`r Sys.Date()`"
 output:
-  # pdf_document:
-  #   fig_caption: no
-  #   number_sections: no
-  #   toc: yes
-  #   toc_depth: 2
-    github_document:
-      html_preview: yes
-      toc: yes
-      toc_depth: 2
+  pdf_document:
+    fig_caption: no
+    number_sections: no
+    toc: yes
+    toc_depth: 2
+    # github_document:
+    #   html_preview: yes
+    #   toc: yes
+    #   toc_depth: 2
 ---
 
 # Dependencies
@@ -227,7 +227,7 @@ p.incons
 
 # Summary figures
 
-```{r}
+```{r, eval=FALSE}
 cowplot::plot_grid(p.80 + theme(legend.position = c(.3,.8)), 
                    p.gh + theme(legend.position = c(.8, .65)) +
                      guides(colour = guide_legend(ncol = 2, byrow = TRUE,
@@ -342,9 +342,9 @@ powres
 powres^2
 ```
 
-Under normality, as before given 80% power, assuming a true effect, two studies will report consistently positive results in only `r round(powres[1,1]^2, digits = 3)`% of the time, dropping to `r round(powres[1,2]^2, digits = 3)`% for 10% trimmed means, and `r round(powres[1,3]^2, digits = 3)`% for 20% trimmed means. 
+Under normality, as before given 80% power, assuming a true effect, two studies will report consistently positive results in only `r round(100*powres[1,1]^2, digits = 1)`% of the time, dropping to `r round(100*powres[1,2]^2, digits = 1)`% for 10% trimmed means, and `r round(100*powres[1,3]^2, digits = 1)`% for 20% trimmed means. 
 
-When sampling from a contaminated normal population, now power is only `r round(powres[2,1], digits = 3)`% for the mean, but remains high at `r round(powres[2,2], digits = 3)`% for the 10% trimmed mean and `r round(powres[2,3], digits = 3)`% for the 20% trimmed mean. As a result, positive decision consistency drops to `r round(powres[2,1]^2, digits = 3)`% for the mean, `r round(powres[2,2]^2, digits = 3)`% for 10% trimmed means, and `r round(powres[2,3]^2, digits = 3)`% for 20% trimmed means.
+When sampling from a contaminated normal population, now power is only `r round(100*powres[2,1], digits = 1)`% for the mean, but remains high at `r round(100*powres[2,2], digits = 1)`% for the 10% trimmed mean and `r round(100*powres[2,3], digits = 1)`% for the 20% trimmed mean. As a result, positive decision consistency drops to `r round(100*powres[2,1]^2, digits = 1)`% for the mean, `r round(100*powres[2,2]^2, digits = 1)`% for 10% trimmed means, and `r round(100*powres[2,3]^2, digits = 1)`% for 20% trimmed means.
 
 # How skewness and outliers affect decision consistency
 

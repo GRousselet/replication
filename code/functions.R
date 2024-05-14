@@ -37,6 +37,41 @@ predint.tm <- function(M, sd, orig.n, new.n, tr=0, alpha=.05){
   ci
 }
 
+mean2g.pred.ci<-function(M1,M2,sd1,sd2,orig.n1,orig.n2,new.n1,new.n2,tr=0,alpha=.05){
+  #
+  #
+  # Generalization of prediction method in Spence & Stanley 
+  # Advances in Methods and Practices in Psychological Science January-March 2024, 
+  # Vol. 7, No. 1, pp. 1–13
+  # for two independent groups.
+  # by Rand R Wilcox, May 2024
+  #
+  # M1 and M2 = observed means or can be a trimmed mean
+  # tr= amount of trimming
+  # sd1 and sd2= Winsorized standard deviations, which is the usual standard deviation 
+  # when tr=0
+  # sd1 and sd2 should be computed with winsd(x,tr)
+  
+  orig.n1=orig.n1*(1-2*tr)^2
+  orig.n2=orig.n2*(1-2*tr)^2
+  new.n1=new.n*(1-2*tr)^2
+  new.n1=new.n*(1-2*tr)^2
+  se=sqrt(sd1^2/orig.n1+ sd2^2/orig.n2+ sd1^2/new.n1+ sd2^2/new.n2)
+  g1=floor(tr*orig.n1)
+  g2=floor(tr*orig.n2)
+  h1=floor(n1-2*g1)
+  h2=floor(n1-2*g2)
+  d1=(orig.n1-1)*sd1^2/(h1*(h1-1))
+  d2=(orig.n2-1)*sd2^2/(h2*(h2-1))
+  top=(d1+d2)^2
+  bot=d1^2/(h1-1) + d2^2/(h2-1)
+  df=top/bot
+  crit=qt(1-alpha/2,df)
+  ci=(M1-M2)-crit*se
+  ci=c(ci,M1-M2+crit*se)
+  ci
+}
+
 # from Rand R Wilcox's Rallfun-v41.txt
 winvar <- function(x, tr=.2, na.rm=FALSE){
   #
