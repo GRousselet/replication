@@ -29,6 +29,7 @@ source("./code/theme_gar.txt")
 
 ## Example from Spence & Stanley (2024)
 
+Compute a one-sample prediction interval using means.  
 https://journals.sagepub.com/doi/10.1177/25152459231217932
 
 ```{r}
@@ -38,6 +39,19 @@ m1 <- 7.21
 sd1 <- 2.20
 ci <- predint(n1, n2, m1, sd1)
 ci
+```
+
+## One-sample prediction interval for a trimmed mean
+
+In the `code` folder, the `functions.R` file contains the `predint.tm` function, which computes a one-sample prediction interval for trimmed means. Not used here, the function `mean2g.pred.ci` handles the two-sample case.
+
+Next chunk is to demonstrate the syntax of the function only. The example from Spence & Stanley (2024) does not involve data, so the matching trimmed mean and winsorized standard deviation cannot be calculated.  
+
+```{r, eval = FALSE}
+tp <- 0.2 # 20% trimmed mean
+m1 <- mean(samp1, trim = tp) # sample trimmed mean
+sd1 <- winsd(samp1, tr = tp) # sample winsorized standard deviation
+predint.tm(m1, sd1, n1, n2, tr = tp, alpha = 0.05)
 ```
 
 # Simulation: normal distribution
