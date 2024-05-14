@@ -19,22 +19,13 @@ output:
 ```{r}
 library(tibble)
 library(ggplot2)
-# source("./code/functions.R")
+library(latex2exp)
+library(beepr)
+source("./code/functions.R")
+source("./code/theme_gar.txt")
 ```
-
 
 # Prediction intervals
-
-```{r}
-predint <- function(n1, n2, m1, sd1, alpha = 0.05){
-se <- sqrt( (sd1^2 / n1) + (sd1^2 / n2))
-df <- n1 - 1
-tval <- qt(1-alpha/2, df)
-ci[1] <- m1 - qt(1-alpha/2,df)*se
-ci[2] <- m1 + qt(1-alpha/2,df)*se
-ci
-}
-```
 
 ## Example from Spence & Stanley (2024)
 
@@ -49,22 +40,26 @@ ci <- predint(n1, n2, m1, sd1)
 ci
 ```
 
-
 # Simulation: normal distribution
 
-In each simulation, perform 2 experiments. First experiment has $n1=50$, second has $n2=70$. Consider one-sample case.
+In each simulation, perform 2 experiments. First experiment has $n1=30$, second has $n2=30$. Consider one-sample case.
 
 Consider these rules to indicate support for a replication:  
- 
-- mean in sample 2, $m_2$, is contained in prediction interval;  
-- $m_2$ is contained in the confidence interval from experiment 1;  
-- the confidence intervals from the two experiments overlap.  
 
-```{r}
-nsim <- 10000
-simres <- matrix(NA, nrow = nsim, 3)
-n1 <- 50
-n2 <- 70
+- mean in sample 2, $m_2$, is contained in prediction interval from experiment 1;  
+- $m_2$ is contained in the confidence interval from experiment 1.  
+
+Consider PI for means and 20% trimmed means. 
+
+```{r, eval=FALSE}
+set.seed(44)
+nsim <- 50000
+simres <- matrix(NA, nrow = nsim, 2)
+simres.tm <- matrix(NA, nrow = nsim, 2)
+n1 <- 30
+n2 <- 30
+tp <- 0.2 # trimming percentage
+aat <- .05 # arbitrary alpha threshold 
 
 for(S in 1:nsim){
   samp1 <- rnorm(n1)
@@ -72,28 +67,54 @@ for(S in 1:nsim){
   m1 <- mean(samp1)
   sd1 <- sd(samp1)
   pi <- predint(n1, n2, m1, sd1)
-  simres.pi.width[S] <- pi[2] - pi[1]
   samp2 <- rnorm(n2)
-  ci2 <- t.test(samp2)$conf.int
+  # ci2 <- t.test(samp2)$conf.int
   m2 <- mean(samp2)
   # rule 1: m2 contained in prediction interval
   simres[S,1] <- m2 >= pi[1] && m2 <= pi[2]
+  pi <- predint.tm(M = mean(samp1, trim=tp), 
+                   sd = winsd(samp1, tr = tp),
+                   orig.n = n1, 
+                   new.n = n2, 
+                   tr = tp, 
+                   alpha = aat)
+  tm2 <- mean(samp2, trim = tp) # 20% trimmed mean in 20% PI?
+  simres.tm[S] <- tm2 >= pi[1] && tm2 <= pi[2]
   # rule 2: m2 contained in confidence interval
   simres[S,2] <- m2 >= ci1[1] && m2 <= ci1[2]
-  # rule 3: confidence intervals overlap
-  simres[S,3] <- ci1[1] <= ci2[2] && ci2[1] <= ci1[2]
+  ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+  simres.tm[S,2] <- tm2 >= ci1[1] && tm2 <= ci1[2]
 }
-# coverage
-apply(simres, 2, mean)
+save(file = "./data/predint_norm.RData",
+     simres, simres.tm)
 ```
+
+## Results
+```{r}
+load(file = "./data/predint_norm.RData")
+
+# coverage
+print("---Normal population---")
+print("inference on means:")
+print("PI  /  CI")
+round(apply(simres, 2, mean), digits = 3)
+print("inference on 20% trimmed means:")
+round(apply(simres.tm, 2, mean), digits = 3)
+```
+
+Prediction interval works as intended. Coverage using CI rule is too conservative. CI overlap is far too liberal. PI for 20% trimmed means has coverage a bit liberal.  
 
 # Simulation: lognormal distribution
 
-```{r}
-nsim <- 10000
-simres <- matrix(NA, nrow = nsim, 3)
-n1 <- 50
-n2 <- 70
+```{r, eval=FALSE}
+set.seed(44)
+nsim <- 50000
+simres <- matrix(NA, nrow = nsim, 2)
+simres.tm <- matrix(NA, nrow = nsim, 2)
+n1 <- 30
+n2 <- 30
+tp <- 0.2 # trimming percentage
+aat <- .05 # arbitrary alpha threshold 
 
 for(S in 1:nsim){
   samp1 <- rlnorm(n1)
@@ -101,21 +122,255 @@ for(S in 1:nsim){
   m1 <- mean(samp1)
   sd1 <- sd(samp1)
   pi <- predint(n1, n2, m1, sd1)
-  simres.pi.width[S] <- pi[2] - pi[1]
   samp2 <- rlnorm(n2)
-  ci2 <- t.test(samp2)$conf.int
+  # ci2 <- t.test(samp2)$conf.int
   m2 <- mean(samp2)
-  # rule 1: m2 is contained in prediction interval
+  # rule 1: m2 contained in prediction interval
   simres[S,1] <- m2 >= pi[1] && m2 <= pi[2]
-  # rule 2: m2 is contained in confidence interval
+  pi <- predint.tm(M = mean(samp1, trim=tp), 
+                   sd = winsd(samp1, tr = tp),
+                   orig.n = n1, 
+                   new.n = n2, 
+                   tr = tp, 
+                   alpha = aat)
+  tm2 <- mean(samp2, trim = tp) # 20% trimmed mean in 20% PI?
+  simres.tm[S] <- tm2 >= pi[1] && tm2 <= pi[2]
+  # rule 2: m2 contained in confidence interval
   simres[S,2] <- m2 >= ci1[1] && m2 <= ci1[2]
-  # rule 3: the confidence intervals overlap
-  simres[S,3] <- ci1[1] <= ci2[2] && ci2[1] <= ci1[2]
+  ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+  simres.tm[S,2] <- tm2 >= ci1[1] && tm2 <= ci1[2]
 }
-# coverage
-apply(simres, 2, mean)
+save(file = "./data/predint_lnorm.RData",
+     simres, simres.tm)
 ```
 
+## Results
+```{r}
+load(file = "./data/predint_lnorm.RData")
+
+# coverage
+print("---Lognormal population---")
+print("inference on means:")
+print("PI  /  CI")
+round(apply(simres, 2, mean), digits = 3)
+print("inference on 20% trimmed means:")
+round(apply(simres.tm, 2, mean), digits = 3)
+```
+
+Coverage is lower under strong asymmetry for PI and CI methods on means. CI overlap remains high. Coverage using 20% trimmed means is at the nominal level.    
+
+# Simulation: contaminated normal distribution
+
+See Wilcox & Rousselet (2023) for details. 
+
+```{r, eval=FALSE}
+set.seed(44)
+nsim <- 50000
+simres <- matrix(NA, nrow = nsim, 2)
+simres.tm <- matrix(NA, nrow = nsim, 2)
+n1 <- 30
+n2 <- 30
+tp <- 0.2 # trimming percentage
+aat <- .05 # arbitrary alpha threshold 
+
+for(S in 1:nsim){
+  samp1 <- cnorm(n1)
+  ci1 <- t.test(samp1)$conf.int
+  m1 <- mean(samp1)
+  sd1 <- sd(samp1)
+  pi <- predint(n1, n2, m1, sd1)
+  samp2 <- cnorm(n2)
+  # ci2 <- t.test(samp2)$conf.int
+  m2 <- mean(samp2)
+  # rule 1: m2 contained in prediction interval
+  simres[S,1] <- m2 >= pi[1] && m2 <= pi[2]
+  pi <- predint.tm(M = mean(samp1, trim=tp), 
+                   sd = winsd(samp1, tr = tp),
+                   orig.n = n1, 
+                   new.n = n2, 
+                   tr = tp, 
+                   alpha = aat)
+  tm2 <- mean(samp2, trim = tp) # 20% trimmed mean in 20% PI?
+  simres.tm[S] <- tm2 >= pi[1] && tm2 <= pi[2]
+  # rule 2: m2 contained in confidence interval
+  simres[S,2] <- m2 >= ci1[1] && m2 <= ci1[2]
+  ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+  simres.tm[S,2] <- tm2 >= ci1[1] && tm2 <= ci1[2]
+}
+save(file = "./data/predint_cnorm.RData",
+     simres, simres.tm)
+```
+
+## Results
+```{r}
+load(file = "./data/predint_cnorm.RData")
+
+# coverage
+print("---Contaminated normal population---")
+print("inference on means:")
+print("PI  /  CI")
+round(apply(simres, 2, mean), digits = 3)
+print("inference on 20% trimmed means:")
+round(apply(simres.tm, 2, mean), digits = 3)
+```
+
+Similar conclusion when outliers are common, though coverage is a bit too high when using 20% trimmed means. 
+
+# Simulation: vary n
+
+Inferences on means and 20% trimmed means.  
+Sampling from normal, lognormal and contaminated normal populations.  
+Two rules: CI and PI.  
+
+```{r, eval=FALSE}
+set.seed(44)
+nsim <- 50000
+nseq <- seq(10, 100, 10)
+nn <- length(nseq)
+simres.ci <- array(NA, dim = c(nsim, nn, 2, 3)) #nseq, m/tm, 3 pops
+simres.pi <- array(NA, dim = c(nsim, nn, 2, 3))
+tp <- 0.2 # trimming percentage
+aat <- .05 # arbitrary alpha threshold 
+
+for(S in 1:nsim){
+  
+  for(N in 1:nn){
+    
+    n <- nseq[N]
+    
+    # Normal population
+    samp1 <- rnorm(n)
+    ci1 <- t.test(samp1)$conf.int
+    m1 <- mean(samp1)
+    sd1 <- sd(samp1)
+    pi <- predint(n, n, m1, sd1)
+    samp2 <- rnorm(n)
+    m2 <- mean(samp2)
+    # rule 1: m2 contained in prediction interval
+    simres.pi[S,N,1,1] <- m2 >= pi[1] && m2 <= pi[2]
+    pi <- predint.tm(M = mean(samp1, trim=tp), 
+                     sd = winsd(samp1, tr = tp),
+                     orig.n = n, 
+                     new.n = n, 
+                     tr = tp, 
+                     alpha = aat)
+    tm2 <- mean(samp2, trim = tp) # 20% trimmed mean in 20% PI?
+    simres.pi[S,N,2,1] <- tm2 >= pi[1] && tm2 <= pi[2]
+    # rule 2: m2 contained in confidence interval
+    simres.ci[S,N,1,1] <- m2 >= ci1[1] && m2 <= ci1[2]
+    ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+    simres.ci[S,N,2,1] <- tm2 >= ci1[1] && tm2 <= ci1[2]
+    
+    # Lognormal population
+    samp1 <- rlnorm(n)
+    ci1 <- t.test(samp1)$conf.int
+    m1 <- mean(samp1)
+    sd1 <- sd(samp1)
+    pi <- predint(n, n, m1, sd1)
+    samp2 <- rlnorm(n)
+    m2 <- mean(samp2)
+    # rule 1: m2 contained in prediction interval
+    simres.pi[S,N,1,2] <- m2 >= pi[1] && m2 <= pi[2]
+    pi <- predint.tm(M = mean(samp1, trim=tp), 
+                     sd = winsd(samp1, tr = tp),
+                     orig.n = n, 
+                     new.n = n, 
+                     tr = tp, 
+                     alpha = aat)
+    tm2 <- mean(samp2, trim = tp) # 20% trimmed mean in 20% PI?
+    simres.pi[S,N,2,2] <- tm2 >= pi[1] && tm2 <= pi[2]
+    # rule 2: m2 contained in confidence interval
+    simres.ci[S,N,1,2] <- m2 >= ci1[1] && m2 <= ci1[2]
+    ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+    simres.ci[S,N,2,2] <- tm2 >= ci1[1] && tm2 <= ci1[2]
+    
+    # Contaminated normal population
+    samp1 <- cnorm(n)
+    ci1 <- t.test(samp1)$conf.int
+    m1 <- mean(samp1)
+    sd1 <- sd(samp1)
+    pi <- predint(n, n, m1, sd1)
+    samp2 <- cnorm(n)
+    m2 <- mean(samp2)
+    # rule 1: m2 contained in prediction interval
+    simres.pi[S,N,1,3] <- m2 >= pi[1] && m2 <= pi[2]
+    pi <- predint.tm(M = mean(samp1, trim=tp), 
+                     sd = winsd(samp1, tr = tp),
+                     orig.n = n, 
+                     new.n = n, 
+                     tr = tp, 
+                     alpha = aat)
+    tm2 <- mean(samp2, trim = tp) # 20% trimmed mean in 20% PI?
+    simres.pi[S,N,2,3] <- tm2 >= pi[1] && tm2 <= pi[2]
+    # rule 2: m2 contained in confidence interval
+    simres.ci[S,N,1,3] <- m2 >= ci1[1] && m2 <= ci1[2]
+    ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+    simres.ci[S,N,2,3] <- tm2 >= ci1[1] && tm2 <= ci1[2]
+  }
+}
+save(file = "./data/predint_sim.RData",
+     simres.ci, simres.pi, nseq, nn, nsim, aat, tp)
+```
+
+## Plot results: prediction interval rule
+
+```{r}
+load(file = "./data/predint_sim.RData")
+
+df <- tibble(coverage = as.vector(apply(simres.pi, c(2,3,4), mean)),
+             est = factor(rep(rep(c("mean", "20% trimmed mean"), each = nn), 3)),
+             n = rep(nseq, 6),
+             pop = rep(c("normal", "lognormal", "contaminated normal"), each = nn*2)
+            )
+
+ggplot(df, aes(x = n, y = coverage, colour = pop, linetype = est)) + theme_gar +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0.95) + 
+  scale_x_continuous(breaks = nseq) +
+  scale_y_continuous(limits = c(0.8, 1)) +
+  scale_colour_manual(values = c("#000000", "#E69F00", "#56B4E9"))
+  # theme(legend.position = "bottom")
+```
+
+## Plot results: confidence interval rule
+
+```{r}
+df <- tibble(coverage = as.vector(apply(simres.ci, c(2,3,4), mean)),
+             est = factor(rep(rep(c("mean", "20% trimmed mean"), each = nn), 3)),
+             n = rep(nseq, 6),
+             pop = rep(c("normal", "lognormal", "contaminated normal"), each = nn*2)
+            )
+
+ggplot(df, aes(x = n, y = coverage, colour = pop, linetype = est)) + theme_gar +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept = 0.95) + 
+  scale_x_continuous(breaks = nseq) +
+  scale_y_continuous(limits = c(0.7, 1)) +
+  scale_colour_manual(values = c("#000000", "#E69F00", "#56B4E9"))
+  # theme(legend.position = "bottom")
+```
+
+# Prediction interval + minimum effect size
+
+Now let's consider a situation in which we perform one experiment with sample size n: if the result is statistically significant, and the effect size is larger than the minimum effect size of interest (0.1), then we carry out a replication with sample size n*2. 
+Population is slightly skewed and likely to generate outliers: $g=0.3$ and $h=0.05$. 
+The population has mean 0.3 -- so Cohen's d of 0.3 assuming a normal population, but less in practice. 
+What proportions of experiments lead to consistent results, meaning that the original and the replication both meet the criteria?  
+
+```{r}
+
+```
+
+# References
+Rouder, J.N., Morey, R.D., Verhagen, J., Province, J.M. and Wagenmakers, E.-J. (2016), Is There a Free Lunch in Inference?. Top Cogn Sci, 8: 520-547. https://doi.org/10.1111/tops.12214
+
+Spence, J. R., & Stanley, D. J. (2024). Tempered Expectations: A Tutorial for Calculating and Interpreting Prediction Intervals in the Context of Replications. Advances in Methods and Practices in Psychological Science, 7(1), 25152459231217932. https://doi.org/10.1177/25152459231217932
+
+Wagenmakers, E.-J., Lee, M.D., Rouder, J.N., & Morey, R.D. (2020) The Principle of Predictive Irrelevance or Why Intervals Should Not be Used for Model Comparison Featuring a Point Null Hypothesis. In Gruber, C.W. (ed), The Theory of Statistics in Psychology: Applications, Use, and Misunderstandings. Springer International Publishing, Cham, pp. 111–129.
+
+Wilcox, R. R., & Rousselet, G. A. (2023). An Updated Guide to Robust Statistical Methods in Neuroscience. Current Protocols, 3(3), e719. https://doi.org/10.1002/cpz1.719
 
 
 
