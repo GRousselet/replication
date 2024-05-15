@@ -1,0 +1,135 @@
+---
+title: "Log data transformation: cortisol and life satisfaction examples"
+author: "Guillaume A. Rousselet & Rand R. Wilcox"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    fig_caption: no
+    number_sections: no
+    toc: yes
+    toc_depth: 2
+    # github_document:
+    #   html_preview: yes
+    #   toc: yes
+    #   toc_depth: 2
+---
+
+# Dependencies
+
+```{r}
+library(tibble)
+library(ggplot2)
+library(cowplot)
+source("./code/theme_gar.txt")
+source("./code/functions.R")
+```
+
+# Load data
+```{r}
+A1 <- read.table(file = "./data/A1_dat.txt")# , header = FALSE)[[1]]
+# boxplot(A1$cort1,log(A1$cort1))
+# boxplot(A1$LSIZ,log(A1$LSIZ))
+```
+
+# Plot distributions
+
+## One grid plot 
+```{r}
+res.cort <- na.omit(A1$cort1)
+res.ls <- na.omit(A1$LSIZ)
+n.cort <- length(res.cort)
+n.ls <- length(res.ls)
+
+df <- tibble(Measurement = factor(c(rep("Cortisol", n.cort*2), rep("Life satisfaction", n.ls*2))),
+             Unit = factor(c(rep("Original", n.cort),rep("Log", n.cort),
+                             rep("Original", n.ls),rep("Log", n.ls))),
+             Res = c(res.cort, log(res.cort), res.ls, log(res.ls))
+             )
+
+df$Unit <- keeporder(df$Unit)
+
+ggplot(df, aes(y = Res)) + theme_gar +
+  geom_boxplot(width = 0.5) +
+  xlim(-1, 1) + 
+  facet_grid(cols = vars(Unit),
+             rows = vars(Measurement),
+             scales = "free"
+             )
+```
+
+## Multiple panels
+
+### Panel A
+```{r}
+df <- tibble(y = res.cort)
+
+pA <- ggplot(df, aes(y = y)) + theme_gar +
+  geom_boxplot(width = 0.5) +
+  xlim(-1, 1) +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
+  labs(y = "Cortisol")
+pA
+```
+
+### Panel B
+```{r}
+df <- tibble(y = log(res.cort[res.cort>0]))
+
+pB <- ggplot(df, aes(y = y)) + theme_gar +
+  geom_boxplot(width = 0.5) +
+  xlim(-1, 1) +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
+  labs(y = "Log cortisol")
+pB
+```
+
+### Panel C
+```{r}
+df <- tibble(y = res.ls)
+
+pC <- ggplot(df, aes(y = y)) + theme_gar +
+  geom_boxplot(width = 0.5) +
+  xlim(-1, 1) +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
+  labs(y = "Life satisfaction")
+pC
+```
+
+### Panel C
+```{r}
+df <- tibble(y = log(res.ls[res.ls>0]))
+
+pD <- ggplot(df, aes(y = y)) + theme_gar +
+  geom_boxplot(width = 0.5) +
+  xlim(-1, 1) +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
+  labs(y = "Log life satisfaction")
+pD
+```
+
+### Combine panels
+```{r}
+cowplot::plot_grid(pA, pB, pC, pD,
+                   labels = c("A", " ", "B", " "),
+                   label_size = 20,
+                   ncol = 4)
+ggsave(filename = "./figures/logtrans.pdf", width = 9, height = 5)
+```
+
+# Variance cortisol
+
+```{r}
+var(res.cort,na.rm = TRUE)
+var(log(res.cort[res.cort>0]),na.rm = TRUE)
+```
+
+# Variance life satisfaction
+```{r}
+var(res.ls, na.rm = TRUE)
+var(log(res.ls[res.ls>0]),na.rm = TRUE)
+```
+
