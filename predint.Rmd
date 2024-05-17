@@ -1,6 +1,6 @@
 ---
 title: "Prediction intervals"
-author: "Guillaume A. Rousselet"
+author: "Guillaume A. Rousselet & Rand R. Wilcox"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
@@ -21,6 +21,7 @@ library(tibble)
 library(ggplot2)
 library(latex2exp)
 library(beepr)
+library(pwr)
 source("./code/functions.R")
 source("./code/theme_gar.txt")
 ```
@@ -241,7 +242,7 @@ Two rules: CI and PI.
 ```{r, eval=FALSE}
 set.seed(44)
 nsim <- 50000
-nseq <- seq(10, 100, 10)
+nseq <- seq(10, 200, 10)
 nn <- length(nseq)
 simres.ci <- array(NA, dim = c(nsim, nn, 2, 3)) #nseq, m/tm, 3 pops
 simres.pi <- array(NA, dim = c(nsim, nn, 2, 3))
@@ -274,7 +275,7 @@ for(S in 1:nsim){
     simres.pi[S,N,2,1] <- tm2 >= pi[1] && tm2 <= pi[2]
     # rule 2: m2 contained in confidence interval
     simres.ci[S,N,1,1] <- m2 >= ci1[1] && m2 <= ci1[2]
-    ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+    ci1 <- trimci(samp1, tr = tp, alpha = aat, pr = FALSE)$ci
     simres.ci[S,N,2,1] <- tm2 >= ci1[1] && tm2 <= ci1[2]
     
     # Lognormal population
@@ -297,7 +298,7 @@ for(S in 1:nsim){
     simres.pi[S,N,2,2] <- tm2 >= pi[1] && tm2 <= pi[2]
     # rule 2: m2 contained in confidence interval
     simres.ci[S,N,1,2] <- m2 >= ci1[1] && m2 <= ci1[2]
-    ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+    ci1 <- trimci(samp1, tr = tp, alpha = aat, pr = FALSE)$ci
     simres.ci[S,N,2,2] <- tm2 >= ci1[1] && tm2 <= ci1[2]
     
     # Contaminated normal population
@@ -320,7 +321,7 @@ for(S in 1:nsim){
     simres.pi[S,N,2,3] <- tm2 >= pi[1] && tm2 <= pi[2]
     # rule 2: m2 contained in confidence interval
     simres.ci[S,N,1,3] <- m2 >= ci1[1] && m2 <= ci1[2]
-    ci1 <- trimci(samp1, tr = tp, alpha = aat)$ci
+    ci1 <- trimci(samp1, tr = tp, alpha = aat, pr = FALSE)$ci
     simres.ci[S,N,2,3] <- tm2 >= ci1[1] && tm2 <= ci1[2]
   }
 }
@@ -334,10 +335,10 @@ save(file = "./data/predint_sim.RData",
 load(file = "./data/predint_sim.RData")
 
 df <- tibble(coverage = as.vector(apply(simres.pi, c(2,3,4), mean)),
-             est = factor(rep(rep(c("mean", "20% trimmed mean"), each = nn), 3)),
+             est = factor(rep(rep(c("mean", "20% trim. mean"), each = nn), 3)),
              n = rep(nseq, 6),
-             pop = rep(c("normal", "lognormal", "contaminated normal"), each = nn*2)
-            )
+             pop = rep(c("normal", "lognormal", "mixed normal"), each = nn*2)
+)
 
 ggplot(df, aes(x = n, y = coverage, colour = pop, linetype = est)) + theme_gar +
   geom_point() +
@@ -345,18 +346,20 @@ ggplot(df, aes(x = n, y = coverage, colour = pop, linetype = est)) + theme_gar +
   geom_hline(yintercept = 0.95) + 
   scale_x_continuous(breaks = nseq) +
   scale_y_continuous(limits = c(0.8, 1)) +
-  scale_colour_manual(values = c("#000000", "#E69F00", "#56B4E9"))
-  # theme(legend.position = "bottom")
+  scale_colour_manual(values = c("#000000", "#E69F00", "#56B4E9")) +
+  theme(legend.position = "bottom") +
+  guides(colour = guide_legend(nrow = 3),
+         linetype = guide_legend(nrow = 2))
 ```
 
 ## Plot results: confidence interval rule
 
 ```{r}
 df <- tibble(coverage = as.vector(apply(simres.ci, c(2,3,4), mean)),
-             est = factor(rep(rep(c("mean", "20% trimmed mean"), each = nn), 3)),
+             est = factor(rep(rep(c("mean", "20% trim. mean"), each = nn), 3)),
              n = rep(nseq, 6),
-             pop = rep(c("normal", "lognormal", "contaminated normal"), each = nn*2)
-            )
+             pop = rep(c("normal", "lognormal", "mixed normal"), each = nn*2)
+)
 
 ggplot(df, aes(x = n, y = coverage, colour = pop, linetype = est)) + theme_gar +
   geom_point() +
@@ -364,9 +367,80 @@ ggplot(df, aes(x = n, y = coverage, colour = pop, linetype = est)) + theme_gar +
   geom_hline(yintercept = 0.95) + 
   scale_x_continuous(breaks = nseq) +
   scale_y_continuous(limits = c(0.7, 1)) +
-  scale_colour_manual(values = c("#000000", "#E69F00", "#56B4E9"))
-  # theme(legend.position = "bottom")
+  scale_colour_manual(values = c("#000000", "#E69F00", "#56B4E9")) +
+  theme(legend.position = "bottom") +
+  guides(colour = guide_legend(nrow = 3),
+         linetype = guide_legend(nrow = 2))
 ```
+
+# Prediction interval + minimum effect size
+
+The situations covered so far do not address the specificity problem: are the effects in two experiments compatible with each other, but also different from effects predicted by alternative models, for instance, a null model, or a larger or smaller effect predicted by another theory?  
+
+So let's consider a situation in which we perform one experiment with sample size n: if the confidence interval excludes the minimum effect size of interest (0.1), then we carry out a replication with sample size n*2. We consider a standard normal population with mean 0.5. With a sample size of 30 and a two-sided one-sample test on means, this leads to slightly over 75% power in theory, much higher than power in many fields.    
+
+```{r}
+# expected power under normality
+pwr.t.test(n=30, d=0.5, sig.level=aat, type="one.sample", alternative="two.sided")$power
+```
+
+What proportions of experiments lead to consistent results, meaning that the original and the replication both meet the criteria? We can contrast the replication estimates to a situation in which we only consider statistical significance in experiment 1 as a criterion for replication, then check if the prediction interval contains the estimate from experiment 2. 
+
+## Simulation
+
+```{r, eval=FALSE}
+set.seed(44)
+nsim <- 50000
+# PI only / PI + CI excludes mesoi
+simres <- matrix(FALSE, nrow = nsim, 2) 
+n1 <- 30
+n2 <- 60
+es <- 0.5 # population mean
+mesoi <- 0.1 # minimum effect size of interest
+
+for(S in 1:nsim){
+  samp1 <- rnorm(n1, mean = es)
+  samp2 <- rnorm(n2, mean = es)
+  # Experiment 1 inference
+  res1 <- t.test(samp1)
+  pval1 <- res1$p.value
+  ci1 <- res1$conf.int
+  m1 <- res1$estimate
+  # replicate if statistically significant
+  if(pval1 <= aat){
+    sd1 <- sd(samp1)
+    pi <- predint(n1, n2, m1, sd1)   
+    # m2 contained in prediction interval?
+    m2 <- mean(samp2)
+    simres[S,1] <- m2 >= pi[1] && m2 <= pi[2]
+  }
+  # replicate only if CI larger than mesoi
+  if(ci1[1] > mesoi){
+    ci2 <- res2$conf.int
+    # Experiment 2: estimate larger than mesoi?
+    if(ci2[1] > mesoi){
+      # m2 contained in prediction interval?
+      simres[S,2] <- m2 >= pi[1] && m2 <= pi[2]
+    }
+  }
+} 
+save(file = "./data/predint_specificity.RData", simres)
+```
+
+## Results
+```{r}
+load(file = "./data/predint_specificity.RData")
+
+# coverage
+print("expt 1 is significant and PI includes m2:")
+sprintf("success rate = %.1f%%", 100*mean(simres[,1]))
+print("CI1 and CI2 larger than minimum effect size and PI1 includes m2:")
+sprintf("success rate = %.1f%%", 100*mean(simres[,2]))
+```
+
+Considering the specificity of the effects leads to much lower capture rates. 53.3% replication would be considered a major problem for any field, yet the simulation assumes that an effect exists, and we have over 75% to detect it. 
+
+Here we assume that the population effect size is constant across sites, thus ignoring how various other factors could influence the effects. A more realistic simulation would lead to even lower replication rates. 
 
 # References
 Spence, J. R., & Stanley, D. J. (2024). Tempered Expectations: A Tutorial for Calculating and Interpreting Prediction Intervals in the Context of Replications. Advances in Methods and Practices in Psychological Science, 7(1), 25152459231217932. https://doi.org/10.1177/25152459231217932

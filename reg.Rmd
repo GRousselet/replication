@@ -1,0 +1,123 @@
+---
+title: "Regression example"
+author: "Guillaume A. Rousselet & Rand R. Wilcox"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    fig_caption: no
+    number_sections: no
+    toc: yes
+    toc_depth: 2
+    # github_document:
+    # html_preview: yes
+    # toc: yes
+    # toc_depth: 2
+---
+
+# Dependencies
+
+```{r}
+library(tibble)
+library(ggplot2)
+source("./code/functions.R")
+source("./code/regfun.R")
+source("./code/theme_gar.txt")
+library(cowplot)
+```
+
+# Load data
+```{r}
+A1 <- read.table(file = "./data/A1_dat.txt")
+d <- cbind(A1$cort1,A1$cort3)
+d <- elimna(d) # remove NA
+df <- tibble(x = d[,1], y = d[,2])
+```
+
+# Regression
+```{r}
+reg.fit <- lm(data = df, formula = y ~ x)$coefficients
+```
+
+# Correlation
+```{r}
+cor.fit <- cor.test(x = df[[1]], y = df[[2]])
+```
+
+Pearson's correlation = `r cor.fit$parameter` [`r cor.fit$conf.int[1]`, `r cor.fit$conf.int[2]`], *p*=`r cor.fit$p.value`.
+
+## Eliminate univariate outliers only
+
+Eliminate only outliers along x-axis (leverage points).
+
+```{r}
+# d=elimna(cbind(A1$cort1,A1$cort2))
+id <- outpro(d[,1])$keep
+plot(d[id,1], d[id,2], xlab='Cort Time 1', ylab='Cort Time 2')
+abline(ols(d[id,1], d[id,2])$coef)
+pcor(d[id,1], d[id,2]) # Pearson .419
+```
+
+## Robust correlation
+Use skipped correlation: remove multivariate outliers defined using robust projection method, then compute Pearson correlation using remaining points. Test statistic is adjusted to take outlier removal into account.  
+```{r}
+scor(x = d[,1], y = d[,2])
+```
+
+# Scatterplot
+
+```{r}
+ggplot(df, aes(x=x, y=y)) + theme_gar +
+  geom_point(alpha = 0.5) +
+  labs(x = "Cortisol at time 1",
+       y = "Cortisol at time 2") +
+  geom_abline(intercept = reg.fit[1], slope = reg.fit[2])
+```
+
+# Flag multivariate outliers 
+
+```{r}
+out.res <- outpro(d)
+```
+
+# Scatterplot with colour-coded outliers
+
+```{r}
+df <- tibble(x = d[,1], 
+             y = d[,2],
+             outlier = factor(!(1:length(d[,1]) %in% out.res$keep)))
+
+pA <- ggplot(df, aes(x=x, y=y, colour = outlier, shape = outlier)) + theme_gar +
+  geom_point(alpha = 0.7, size = 2) +
+  scale_colour_manual(values = c("black", "grey")) + 
+  labs(x = "Cortisol at time 1",
+       y = "Cortisol at time 2") +
+  geom_abline(intercept = reg.fit[1], slope = reg.fit[2]) +
+  theme(legend.position = c(.25, .8)) 
+pA
+```
+
+# Scatterplot without multivariate outliers
+
+```{r}
+df.out <- tibble(x = d[out.res$keep,1],
+                 y = d[out.res$keep,2])
+
+reg.fit.out <- lm(data = df.out, formula = y ~ x)$coefficients
+#cor.fit <- cor.test(x = df.out[[1]], y = df.out[[2]])
+
+pB <- ggplot(df.out, aes(x=x, y=y)) + theme_gar +
+  geom_point(alpha = 0.7) +
+  labs(x = "Cortisol at time 1",
+       y = "Cortisol at time 2") +
+  geom_abline(intercept = reg.fit.out[1], slope = reg.fit.out[2])
+pB
+```
+## Merge panels
+```{r, eval = FALSE}
+cowplot::plot_grid(pA, pB, 
+                   labels = c("A", "B"),
+                   label_size = 20,
+                   ncol = 2)
+ggsave(filename = "./figures/reg.pdf", width = 9, height = 4)
+```
+

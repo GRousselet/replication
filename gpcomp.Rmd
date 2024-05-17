@@ -1,0 +1,62 @@
+---
+title: "Group comparison example"
+author: "Guillaume A. Rousselet & Rand R. Wilcox"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    fig_caption: no
+    number_sections: no
+    toc: yes
+    toc_depth: 2
+    # github_document:
+    # html_preview: yes
+    # toc: yes
+    # toc_depth: 2
+---
+
+# Dependencies
+
+```{r}
+library(tibble)
+library(ggplot2)
+source("./code/functions.R")
+source("./code/theme_gar.txt")
+```
+
+# Load data
+```{r}
+A1 <- read.table(file = "./data/A1_dat.txt")
+a <- fac2list(A1$CESD,A1$edugp)
+```
+
+# Illustrate results
+
+Horizontal black = means. 
+Horizontal grey = medians.  
+
+```{r}
+df <- tibble(gp = factor(c(rep("High school", length(a[[2]])), rep("Advanced degree", length(a[[5]])))),
+             score = c(a[[2]],a[[5]]))
+
+ggplot(df, aes(x=gp, y=score)) + theme_gar +
+  geom_jitter(shape = 21, width = 0.1, fill = "grey") +
+  stat_summary(fun = "mean", geom = "crossbar", width = 0.5, size = 0.2) +
+  stat_summary(fun = "median", geom = "crossbar", width = 0.5, size = 0.2, colour = "grey")
+```
+
+# Cohen's d
+```{r}
+akp.effect(a[[2]],a[[5]],tr=0)
+```
+
+# Trimmed mean version of Cohen's d
+
+Method from Algina et al. (2005).
+```{r}
+akp.effect(a[[2]],a[[5]],tr=0.2)
+```
+
+# Reference
+
+Algina, J., Keselman, H. J., & Penfield, R. D. (2005). An Alternative to Cohen’s Standardized Mean Difference Effect Size: A Robust Parameter and Confidence Interval in the Two Independent Groups Case. Psychological Methods, 10(3), 317–328. https://doi.org/10.1037/1082-989X.10.3.317
+

@@ -328,6 +328,176 @@ ftrim<-function(z,tr,g,h){
   res
 }
 
+akp.effect<-function(x,y,EQVAR=TRUE,tr=.2){
+  #
+  # Computes the robust effect size suggested by
+  #Algina, Keselman, Penfield Psych Methods, 2005, 317-328
+  library(MASS)
+  x<-elimna(x)
+  y<-elimna(y)
+  n1<-length(x)
+  n2<-length(y)
+  s1sq=winvar(x,tr=tr)
+  s2sq=winvar(y,tr=tr)
+  spsq<-(n1-1)*s1sq+(n2-1)*s2sq
+  sp<-sqrt(spsq/(n1+n2-2))
+  cterm=1
+  if(tr>0)cterm=area(dnormvar,qnorm(tr),qnorm(1-tr))+2*(qnorm(tr)^2)*tr
+  cterm=sqrt(cterm)
+  if(EQVAR)dval<-cterm*(tmean(x,tr)-tmean(y,tr))/sp
+  if(!EQVAR){
+    dval<-cterm*(tmean(x,tr)-tmean(y,tr))/sqrt(s1sq)
+    dval[2]=cterm*(tmean(x,tr)-tmean(y,tr))/sqrt(s2sq)
+  }
+  dval
+}
+
+
+dnormvar<-function(x){
+  x^2*dnorm(x)
+}
+ebarplot<-function(x,y=NULL,nse=2, liw = uiw, aui=NULL, ali=aui,
+                   err="y", tr=0,ylim=NULL, sfrac = 0.01, gap=0, add=FALSE,
+                   col=par("col"), lwd=par("lwd"), slty=par("lty"), xlab="Group",
+                   ylab=NULL, ...) {
+  # plots error bars using the data in
+  # x, which is assumed to be a matrix with J columns (J groups) or
+  # x has list mode.
+  # nse indicates how many standard errors to use when plotting.
+  #
+  # By default, means are used. To use a trimmed mean, set
+  # tr to some value between 0 and .5
+  # So tr=.2 would use a 20% trimmed mean
+  #
+  # Missing values are automatically removed.
+  #
+  if(tr==.5)stop("For medians, use ebarplot.med")
+  if(!is.null(y)){
+    if(is.matrix(x))stop("When y is given, x should not be a matrix")
+    if(is.list(x))stop("When y is given, x should not be in list mode")
+    rem=x
+    x=list()
+    x[[1]]=rem
+    x[[2]]=y
+  }
+  if(is.matrix(x))x<-listm(x)
+  mval<-NA
+  if(!is.list(x) && is.null(y))stop("This function assumes there
+ are  two or more groups")
+  for(j in 1:length(x))mval[j]<-mean(x[[j]],na.rm=TRUE,tr=tr)
+  se<-NA
+  #for(j in 1:length(x))se[j]<-sqrt(var(x[[j]],na.rm=TRUE)/length(x[[j]])
+  for(j in 1:length(x))se[j]<-trimse(x[[j]],na.rm=TRUE,tr=tr)
+  uiw<-nse*se
+  plotCI(mval,y=NULL, uiw=uiw, liw = uiw, aui=NULL, ali=aui,
+         err="y", ylim=NULL, sfrac = 0.01, gap=0, add=FALSE,
+         col=par("col"), lwd=par("lwd"), slty=par("lty"), xlab=xlab,
+         ylab=ylab)
+}
+
+tmean<-function(x,tr=.2,na.rm=FALSE,STAND=NULL){
+  if(na.rm)x<-x[!is.na(x)]
+  val<-mean(x,tr)
+  val
+}
+
+fac2list<-function(x,g,pr=TRUE){
+  #
+  # data are stored in x
+  # information about the level of the value in x is stored in g,
+  # which can be a matrix with up to 4 columns
+  #
+  # sort the data in x into groups based on values in g.
+  # store results in list mode.
+  #
+  #  Example: fac2list(m[,2],m[,4]) would sort the values
+  #  in column 2 of m according to the values in column 4 of m
+  #
+  g=as.data.frame(g)
+  ng=ncol(g)+1
+  xg=cbind(x,g)
+  xg=elimna(xg)
+  x=xg[,1]
+  x=as.matrix(x)
+  g=xg[,2:ng]
+  g=as.data.frame(g)
+  L=ncol(g)
+  g=listm(g)
+  for(j in 1:L)g[[j]]=as.factor(g[[j]])
+  g=matl(g)
+  Lp1=L+1
+  if(L>4)stop("Can have at most 4 factors")
+  if(L==1){
+    res=selby(cbind(x,g),2,1)
+    group.id=res$grpn
+    res=res$x
+  }
+  if(L>1){
+    res=selby2(cbind(x,g),c(2:Lp1),1)
+    group.id=res$grpn
+    res=res$x
+  }
+  if(pr)
+  {print("Group Levels:")
+    print(group.id)
+  }
+  res=lapply(res,as.numeric)
+  res
+}
+
+listm<-function(x){
+  #
+  # Store the data in a matrix or data frame in a new
+  # R variable having list mode.
+  # Col 1 will be stored in y[[1]], col 2 in y[[2]], and so on.
+  #
+  if(is.null(dim(x)))stop("The argument x must be a matrix or data frame")
+  y<-list()
+  for(j in 1:ncol(x))y[[j]]<-x[,j]
+  y
+}
+
+matl<-function(x){
+  #
+  # take data in list mode and store it in a matrix
+  #
+  J=length(x)
+  nval=NA
+  for(j in 1:J)nval[j]=length(x[[j]])
+  temp<-matrix(NA,ncol=J,nrow=max(nval))
+  for(j in 1:J)temp[1:nval[j],j]<-x[[j]]
+  temp
+}
+
+selby<-function(m,grpc,coln){
+  #
+  #
+  #  A commmon situation is to have data stored in an n by p matrix where
+  #  one or more of the columns are  group identification numbers.
+  #  This function groups  all values in column coln according to the
+  #  group numbers in column grpc and stores the  results in list mode.
+  #
+  #  More than one column of data can sorted
+  #
+  # grpc indicates the column of the matrix containing group id number
+  #
+  if(is.null(dim(m)))stop("Data must be stored in a matrix or data frame")
+  if(is.na(grpc[1]))stop("The argument grpc is not specified")
+  if(is.na(coln[1]))stop("The argument coln is not specified")
+  if(length(grpc)!=1)stop("The argument grpc must have length 1")
+  x<-vector("list")
+  grpn<-sort(unique(m[,grpc]))
+  it<-0
+  for (ig in 1:length(grpn)){
+    for (ic in 1:length(coln)){
+      it<-it+1
+      flag<-(m[,grpc]==grpn[ig])
+      x[[it]]<-m[flag,coln[ic]]
+    }}
+  list(x=x,grpn=grpn)
+}
+
+
 
 
 

@@ -1,6 +1,6 @@
 ---
 title: "You get the symptoms of a replication crisis even when there isn't one: considering power"
-author: "Guillaume A. Rousselet"
+author: "Guillaume A. Rousselet & Rand R. Wilcox"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
@@ -349,7 +349,7 @@ When sampling from a contaminated normal population, now power is only `r round(
 # How skewness and outliers affect decision consistency
 
 Use g-and-h distributions. See details in Rousselet & Wilcox (2020).
-Now h = 0.1, so outliers are more likely than in the previous simulation. 
+Now h = 0.1, so outliers are more likely than in the previous `g-and-h` simulation. Not surprisingly, replication success based on statistical significance gets worse when sampling from distributions with heavier tails.  
 
 ## Illustrate population
 ```{r}
