@@ -1,5 +1,7 @@
 # MORE REASONS WHY REPLICATION IS A DIFFICULT ISSUE
 
+Guillaume A. Rousselet & Rand R. Wilcox (2024)
+
 R code for book chapter on replicability.  
 
 The notebooks are in the main folder.  
