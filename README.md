@@ -3,9 +3,9 @@
 R code for book chapter on replicability.  
 
 The notebooks are in the main folder. 
-The html versions are in the `/docs/` folder. 
-Functions called by the notebooks are in the `/code/` folder. 
-Original data and simulation results are in the `/data/` folder.  
+The html versions are in the [`docs`](docs/) folder. 
+Functions called by the notebooks are in the [`code`](code/) folder. 
+Original data and simulation results are in the [`data`](data/) folder.  
 
 ## Description of notebooks
 
