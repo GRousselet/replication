@@ -3,15 +3,15 @@ title: "Group comparison example"
 author: "Guillaume A. Rousselet & Rand R. Wilcox"
 date: "`r Sys.Date()`"
 output:
-  pdf_document:
-    fig_caption: no
-    number_sections: no
+  # pdf_document:
+  #   fig_caption: no
+  #   number_sections: no
+  #   toc: yes
+  #   toc_depth: 2
+    github_document:
+    html_preview: yes
     toc: yes
     toc_depth: 2
-    # github_document:
-    # html_preview: yes
-    # toc: yes
-    # toc_depth: 2
 ---
 
 # Dependencies
@@ -24,6 +24,8 @@ source("./code/theme_gar.txt")
 ```
 
 # Load data
+
+Data from Clark et al. (2012).
 ```{r}
 A1 <- read.table(file = "./data/A1_dat.txt")
 a <- fac2list(A1$CESD,A1$edugp)
@@ -41,7 +43,8 @@ df <- tibble(gp = factor(c(rep("High school", length(a[[2]])), rep("Advanced deg
 ggplot(df, aes(x=gp, y=score)) + theme_gar +
   geom_jitter(shape = 21, width = 0.1, fill = "grey") +
   stat_summary(fun = "mean", geom = "crossbar", width = 0.5, size = 0.2) +
-  stat_summary(fun = "median", geom = "crossbar", width = 0.5, size = 0.2, colour = "grey")
+  stat_summary(fun = "median", geom = "crossbar", width = 0.5, size = 0.2, colour = "grey") +
+  labs(x = "Group", y = "Depression score")
 ```
 
 # Cohen's d
@@ -56,7 +59,10 @@ Method from Algina et al. (2005).
 akp.effect(a[[2]],a[[5]],tr=0.2)
 ```
 
-# Reference
+# References
 
 Algina, J., Keselman, H. J., & Penfield, R. D. (2005). An Alternative to Cohen’s Standardized Mean Difference Effect Size: A Robust Parameter and Confidence Interval in the Two Independent Groups Case. Psychological Methods, 10(3), 317–328. https://doi.org/10.1037/1082-989X.10.3.317
+
+Clark, F., Jackson, J., Carlson, M., Chou, C.-P., Cherry, B. J., Jordan-Marsh, M., Knight, B. G., Mandel, D., Blanchard, J., Granger, D. A., Wilcox, R. R., Lai, M. Y., White, B., Hay, J., Lam, C., Marterella, A., & Azen, S. P. (2012). Effectiveness of a lifestyle intervention in promoting the well-being of independently living older people: Results of the Well Elderly 2 Randomised Controlled Trial. J Epidemiol Community Health, 66(9), 782–790. https://doi.org/10.1136/jech.2009.099754
+
 

@@ -3,15 +3,15 @@ title: "Log data transformation: cortisol and life satisfaction examples"
 author: "Guillaume A. Rousselet & Rand R. Wilcox"
 date: "`r Sys.Date()`"
 output:
-  pdf_document:
-    fig_caption: no
-    number_sections: no
-    toc: yes
-    toc_depth: 2
-    # github_document:
-    #   html_preview: yes
-    #   toc: yes
-    #   toc_depth: 2
+  # pdf_document:
+  #   fig_caption: no
+  #   number_sections: no
+  #   toc: yes
+  #   toc_depth: 2
+    github_document:
+      html_preview: yes
+      toc: yes
+      toc_depth: 2
 ---
 
 # Dependencies
@@ -25,8 +25,10 @@ source("./code/functions.R")
 ```
 
 # Load data
+
+Data from Clark et al. (2012).
 ```{r}
-A1 <- read.table(file = "./data/A1_dat.txt")# , header = FALSE)[[1]]
+A1 <- read.table(file = "./data/A1_dat.txt")
 # boxplot(A1$cort1,log(A1$cort1))
 # boxplot(A1$LSIZ,log(A1$LSIZ))
 ```
@@ -132,4 +134,8 @@ var(log(res.cort[res.cort>0]),na.rm = TRUE)
 var(res.ls, na.rm = TRUE)
 var(log(res.ls[res.ls>0]),na.rm = TRUE)
 ```
+
+# References
+
+Clark, F., Jackson, J., Carlson, M., Chou, C.-P., Cherry, B. J., Jordan-Marsh, M., Knight, B. G., Mandel, D., Blanchard, J., Granger, D. A., Wilcox, R. R., Lai, M. Y., White, B., Hay, J., Lam, C., Marterella, A., & Azen, S. P. (2012). Effectiveness of a lifestyle intervention in promoting the well-being of independently living older people: Results of the Well Elderly 2 Randomised Controlled Trial. J Epidemiol Community Health, 66(9), 782–790. https://doi.org/10.1136/jech.2009.099754
 

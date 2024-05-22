@@ -3,15 +3,15 @@ title: "Regression example"
 author: "Guillaume A. Rousselet & Rand R. Wilcox"
 date: "`r Sys.Date()`"
 output:
-  pdf_document:
-    fig_caption: no
-    number_sections: no
+  # pdf_document:
+  #   fig_caption: no
+  #   number_sections: no
+  #   toc: yes
+  #   toc_depth: 2
+    github_document:
+    html_preview: yes
     toc: yes
     toc_depth: 2
-    # github_document:
-    # html_preview: yes
-    # toc: yes
-    # toc_depth: 2
 ---
 
 # Dependencies
@@ -26,11 +26,18 @@ library(cowplot)
 ```
 
 # Load data
+
+Data from Clark et al. (2012).
 ```{r}
 A1 <- read.table(file = "./data/A1_dat.txt")
 d <- cbind(A1$cort1,A1$cort3)
 d <- elimna(d) # remove NA
 df <- tibble(x = d[,1], y = d[,2])
+```
+
+# Plot all data
+```{r}
+plot(d[,1], d[,2], xlab='Cort Time 1', ylab='Cort Time 2')
 ```
 
 # Regression
@@ -43,11 +50,11 @@ reg.fit <- lm(data = df, formula = y ~ x)$coefficients
 cor.fit <- cor.test(x = df[[1]], y = df[[2]])
 ```
 
-Pearson's correlation = `r cor.fit$parameter` [`r cor.fit$conf.int[1]`, `r cor.fit$conf.int[2]`], *p*=`r cor.fit$p.value`.
+Pearson's correlation = `r round(cor.fit$estimate, digits=2)` [`r round(cor.fit$conf.int[1], digits=2)`, `r round(cor.fit$conf.int[2], digits=2)`], *p*=`r cor.fit$p.value`.
 
 ## Eliminate univariate outliers only
 
-Eliminate only outliers along x-axis (leverage points).
+Eliminate only outliers along x-axis (leverage points). See chapter 9 in Wilcox (2022).  
 
 ```{r}
 # d=elimna(cbind(A1$cort1,A1$cort2))
@@ -58,9 +65,10 @@ pcor(d[id,1], d[id,2]) # Pearson .419
 ```
 
 ## Robust correlation
-Use skipped correlation: remove multivariate outliers defined using robust projection method, then compute Pearson correlation using remaining points. Test statistic is adjusted to take outlier removal into account.  
+
+Use skipped correlation: remove multivariate outliers defined using robust projection method, then compute Pearson correlation using remaining points. Test statistic is adjusted to take outlier removal into account (Pernet, Wilcox & Rousselet, 2013).  
 ```{r}
-scor(x = d[,1], y = d[,2])
+scor(x = d[,1], y = d[,2], SEED=FALSE)
 ```
 
 # Scatterplot
@@ -112,6 +120,7 @@ pB <- ggplot(df.out, aes(x=x, y=y)) + theme_gar +
   geom_abline(intercept = reg.fit.out[1], slope = reg.fit.out[2])
 pB
 ```
+
 ## Merge panels
 ```{r, eval = FALSE}
 cowplot::plot_grid(pA, pB, 
@@ -120,4 +129,13 @@ cowplot::plot_grid(pA, pB,
                    ncol = 2)
 ggsave(filename = "./figures/reg.pdf", width = 9, height = 4)
 ```
+
+# References
+
+Clark, F., Jackson, J., Carlson, M., Chou, C.-P., Cherry, B. J., Jordan-Marsh, M., Knight, B. G., Mandel, D., Blanchard, J., Granger, D. A., Wilcox, R. R., Lai, M. Y., White, B., Hay, J., Lam, C., Marterella, A., & Azen, S. P. (2012). Effectiveness of a lifestyle intervention in promoting the well-being of independently living older people: Results of the Well Elderly 2 Randomised Controlled Trial. J Epidemiol Community Health, 66(9), 782–790. https://doi.org/10.1136/jech.2009.099754
+
+Pernet, C. R., Wilcox, R. R., & Rousselet, G. A. (2013). Robust Correlation Analyses: False Positive and Power Validation Using a New Open Source Matlab Toolbox. Frontiers in Psychology, 3. https://doi.org/10.3389/fpsyg.2012.00606
+
+Wilcox, R. R. (2022). Introduction to Robust Estimation and Hypothesis Testing (5th ed.). Academic Press.
+
 
