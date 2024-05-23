@@ -2,6 +2,8 @@
 
 Guillaume A. Rousselet & Rand R. Wilcox (2024)
 
+[Preprint](https://osf.io/preprints/osf/9amhe)
+
 R code for book chapter on replicability.  
 
 The notebooks are in the main folder.  
